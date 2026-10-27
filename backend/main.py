@@ -31,7 +31,13 @@ app = FastAPI(title="Resume Customizer API")
 logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://ai-resume-customizer-cywj.vercel.app",
+    ],
+    allow_origin_regex=r"https://ai-resume-customizer-cywj-[a-z0-9-]+-team-c25\.vercel\.app",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
