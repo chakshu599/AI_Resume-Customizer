@@ -35,3 +35,7 @@ Next.js frontend (JD input, resume upload, output + download) -> REST API -> Fas
 - LLM output is plain text; PDF download is basic single-column layout.
 - Large files limited to 5MB; extraction quality depends on resume format.
 - Requires valid GROQ_API_KEY.
+
+## AI Tools Used
+- Groq API (LLM provider)
+- ChatGPT/Copilot for development assistance
