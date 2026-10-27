@@ -418,3 +418,26 @@ async def download(text: str = Form(...), format: str = Form("txt")):
         pdf.save()
         return Response(content=buffer.getvalue(), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=resume.pdf"})
     raise HTTPException(400, "Unsupported format.")
+
+from fastapi.responses import StreamingResponse
+
+@app.post("/customize/stream")
+async def customize_stream(jd: str = Form(...), file: UploadFile = File(...)):
+    content = await file.read()
+    name = file.filename or ""
+    lower = name.lower()
+    if lower.endswith(".pdf"):
+        resume = parse_pdf(content)
+    elif lower.endswith(".docx"):
+        resume = parse_docx(content)
+    else:
+        raise HTTPException(400, "Unsupported file type")
+    key = os.getenv("GROQ_API_KEY")
+    client = Groq(api_key=key)
+    prompt = f"Tailor resume to JD. JD: {jd} Resume: {resume}"
+    def gen():
+        r = client.chat.completions.create(model=os.getenv("GROQ_MODEL","llama-3.3-70b-versatile"), messages=[{"role":"user","content":prompt}], temperature=0.4, stream=True)
+        for chunk in r:
+            delta = chunk.choices[0].delta.content or ""
+            yield delta
+    return StreamingResponse(gen(), media_type="text/plain")
