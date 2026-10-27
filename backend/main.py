@@ -31,7 +31,13 @@ app = FastAPI(title="Resume Customizer API")
 logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://ai-resume-customizer-cywj.vercel.app",
+    ],
+    allow_origin_regex=r"https://ai-resume-customizer-cywj-[a-z0-9-]+-team-c25\.vercel\.app",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -418,3 +424,26 @@ async def download(text: str = Form(...), format: str = Form("txt")):
         pdf.save()
         return Response(content=buffer.getvalue(), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=resume.pdf"})
     raise HTTPException(400, "Unsupported format.")
+
+from fastapi.responses import StreamingResponse
+
+@app.post("/customize/stream")
+async def customize_stream(jd: str = Form(...), file: UploadFile = File(...)):
+    content = await file.read()
+    name = file.filename or ""
+    lower = name.lower()
+    if lower.endswith(".pdf"):
+        resume = parse_pdf(content)
+    elif lower.endswith(".docx"):
+        resume = parse_docx(content)
+    else:
+        raise HTTPException(400, "Unsupported file type")
+    key = os.getenv("GROQ_API_KEY")
+    client = Groq(api_key=key)
+    prompt = f"Tailor resume to JD. JD: {jd} Resume: {resume}"
+    def gen():
+        r = client.chat.completions.create(model=os.getenv("GROQ_MODEL","llama-3.3-70b-versatile"), messages=[{"role":"user","content":prompt}], temperature=0.4, stream=True)
+        for chunk in r:
+            delta = chunk.choices[0].delta.content or ""
+            yield delta
+    return StreamingResponse(gen(), media_type="text/plain")
