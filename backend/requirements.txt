@@ -6,3 +6,4 @@ pdfplumber
 python-docx
 reportlab
 python-dotenv
+email-validator
